@@ -59,6 +59,10 @@ const getTeamCrest = (teamName) => {
   return teamCrests[teamName] || '';
 };
 
+const formatGroupName = (groupName) => {
+  return groupName.replace('_', ' ');
+};
+
 // reactive state
 const allGroupStandings = ref([]);
 const loading = ref(true);
@@ -122,7 +126,7 @@ onMounted(async () => {
       <GroupTable 
         v-for="(teams, groupName) in groups" 
         :key="groupName"
-        :group-name="groupName"
+        :group-name="formatGroupName(groupName)"
         :teams="teams"
       />
     </div>
