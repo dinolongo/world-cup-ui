@@ -114,6 +114,7 @@ const teamCrests = {
 
 // Format group name
 const formatGroupName = (groupName) => {
+  if (!groupName || typeof groupName !== 'string') return groupName
   return groupName.replace('_', ' ')
 }
 
