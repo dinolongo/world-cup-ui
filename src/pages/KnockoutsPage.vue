@@ -16,6 +16,8 @@ const leftBracketEl = ref(null)
 const leftConnectorPaths = ref([])
 const rightBracketEl = ref(null)
 const rightConnectorPaths = ref([])
+const leftSvgViewBox = ref('0 0 0 0')
+const rightSvgViewBox = ref('0 0 0 0')
 
 // Get third-place seeding lookup
 const thirdPlaceSeeding = computed(() => predictionStore.getThirdPlaceSeeding())
@@ -163,6 +165,7 @@ const getRelativeRect = (el, container) => {
   }
 }
 
+
 const leftBracketPairs = [
   { sources: [73, 74], target: 89 },
   { sources: [75, 76], target: 90 },
@@ -225,6 +228,14 @@ const calculatePaths = (pairs, containerEl, direction = 'left') => {
 }
 
 const recalculatePaths = () => {
+  if (leftBracketEl.value) {
+    const r = leftBracketEl.value.getBoundingClientRect()
+    leftSvgViewBox.value = `0 0 ${r.width} ${r.height}`
+  }
+  if (rightBracketEl.value) {
+    const r = rightBracketEl.value.getBoundingClientRect()
+    rightSvgViewBox.value = `0 0 ${r.width} ${r.height}`
+  }
   leftConnectorPaths.value = calculatePaths(leftBracketPairs, leftBracketEl.value, 'left')
   rightConnectorPaths.value = calculatePaths(rightBracketPairs, rightBracketEl.value, 'right')
 }
@@ -266,7 +277,7 @@ const selectWinner = (match, team) => {
     <div v-else class="bracket-container">
       <!-- Left Bracket -->
       <div class="bracket-side left-bracket" ref="leftBracketEl">
-        <svg class="connector-svg" ref="leftSvg">
+        <svg class="connector-svg" ref="leftSvg" viewBox="leftSvgViewBox">
           <path 
             v-for="path in leftConnectorPaths" 
             :key="path.id"
@@ -376,7 +387,7 @@ const selectWinner = (match, team) => {
 
       <!-- Right Bracket -->
       <div class="bracket-side right-bracket" ref="rightBracketEl">
-        <svg class="connector-svg" ref="rightSvg">
+        <svg class="connector-svg" ref="rightSvg" :viewBox="rightSvgViewBox">
            <path 
             v-for="path in rightConnectorPaths" 
             :key="path.id"
@@ -489,17 +500,17 @@ h1 {
   max-width: 1800px;
   overflow-x: auto;
   padding: 20px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .bracket-side {
   position: relative;
-  display: flex;          /* ADD THESE */
-  flex-direction: row;    /* ADD THESE */
-  align-items: flex-start;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch; 
   gap: 16px;
   flex: 1;
-  min-width: 0;           /* changed from 280px */
+  min-width: 0;
 }
 
 .bracket-side h2 {
@@ -511,11 +522,9 @@ h1 {
 }
 
 .round-section {
-  margin-bottom: 24px;
-  flex: 0 0 158px;  /* increased from 132px */
+  flex: 0 0 132px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
 .round-section h3 {
@@ -524,12 +533,16 @@ h1 {
   font-weight: 600;
   text-align: center;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
+
 .matches {
+  gap: 8px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: space-around;  /* distributes cards evenly in available height */
+  flex: 1;                         /* fills the full column height */
 }
 
 .center-section {
@@ -587,5 +600,15 @@ h1 {
     width: 100%;
     max-width: 400px;
   }
+}
+
+.connector-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
 }
 </style>
