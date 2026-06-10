@@ -49,105 +49,131 @@ const setCardRef = (el, matchNum) => {
   if (el) cardRefs.value[matchNum] = el.$el  // $el gives the root DOM node
 }
 
+const leftRoundOf32MatchNumbers = ref([
+  74, 77, 73, 75, 83, 84, 81, 82
+])
+const rightRoundOf32MatchNumbers = ref([
+  76, 78, 79, 80, 86, 88,85, 87 
+])
+const leftRoundOf16MatchNumbers = ref([
+  89, 90, 93, 94
+])
+const rightRoundOf16MatchNumbers = ref([
+  91, 92, 95, 96
+])
+const leftQuarterFinalMatchNumbers = ref([97, 98])
+const rightQuarterFinalMatchNumbers = ref([99, 100])
+const leftSemiFinalMatchNumber = ref(101)
+const rightSemiFinalMatchNumber = ref(102)
+const allLeftBrackNumber = ref([
+  ...leftRoundOf32MatchNumbers.value,
+  ...leftRoundOf16MatchNumbers.value,
+  ...leftQuarterFinalMatchNumbers.value,
+  leftSemiFinalMatchNumber.value
+])
+const allRightBrackNumber = ref([
+  ...rightRoundOf32MatchNumbers.value,
+  ...rightRoundOf16MatchNumbers.value,
+  ...rightQuarterFinalMatchNumbers.value,
+  rightSemiFinalMatchNumber.value
+])
+
 // Get bracket slot for a match number (vertical position in bracket)
 const getBracketSlot = (matchNum) => {
   // Left bracket slots
-  if (matchNum >= 73 && matchNum <= 80) {
+  if (allLeftBrackNumber.value.includes(matchNum)) {
     // Ro32: pairs that feed into Ro16 matches
-    if (matchNum === 73 || matchNum === 74) return 0
-    if (matchNum === 75 || matchNum === 76) return 1
-    if (matchNum === 77 || matchNum === 78) return 2
-    if (matchNum === 79 || matchNum === 80) return 3
-  }
-  if (matchNum >= 89 && matchNum <= 92) {
+    if(leftRoundOf32MatchNumbers.value.includes(matchNum)) {
+      return leftRoundOf32MatchNumbers.value.indexOf(matchNum)
+    }
     // Ro16: pairs that feed into QF matches
-    if (matchNum === 89) return 0
-    if (matchNum === 90) return 1
-    if (matchNum === 91) return 2
-    if (matchNum === 92) return 3
-  }
-  if (matchNum >= 97 && matchNum <= 98) {
+    if(leftRoundOf16MatchNumbers.value.includes(matchNum)) {
+      return leftRoundOf16MatchNumbers.value.indexOf(matchNum)
+    }
     // QF: pairs that feed into SF match
-    if (matchNum === 97) return 0
-    if (matchNum === 98) return 1
+    if(leftQuarterFinalMatchNumbers.value.includes(matchNum)) {
+      return leftQuarterFinalMatchNumbers.value.indexOf(matchNum)
+    }
+    // SF
+    if(leftSemiFinalMatchNumber.value === matchNum) {
+      return 0
+    }
   }
-  if (matchNum === 101) return 0 // SF
-  
-  // Right bracket slots
-  if (matchNum >= 81 && matchNum <= 88) {
-    // Ro32: pairs that feed into Ro16 matches
-    if (matchNum === 81 || matchNum === 82) return 0
-    if (matchNum === 83 || matchNum === 84) return 1
-    if (matchNum === 85 || matchNum === 86) return 2
-    if (matchNum === 87 || matchNum === 88) return 3
-  }
-  if (matchNum >= 93 && matchNum <= 96) {
+  if (allRightBrackNumber.value.includes(matchNum)) {
+    if(rightRoundOf32MatchNumbers.value.includes(matchNum)) {
+      return rightRoundOf32MatchNumbers.value.indexOf(matchNum)
+    }
     // Ro16: pairs that feed into QF matches
-    if (matchNum === 93) return 0
-    if (matchNum === 94) return 1
-    if (matchNum === 95) return 2
-    if (matchNum === 96) return 3
-  }
-  if (matchNum >= 99 && matchNum <= 100) {
+    if(rightRoundOf16MatchNumbers.value.includes(matchNum)) {
+      return rightRoundOf16MatchNumbers.value.indexOf(matchNum)
+    }
     // QF: pairs that feed into SF match
-    if (matchNum === 99) return 0
-    if (matchNum === 100) return 1
+    if(rightQuarterFinalMatchNumbers.value.includes(matchNum)) {
+      return rightQuarterFinalMatchNumbers.value.indexOf(matchNum)
+    }
+    // SF
+    if(rightSemiFinalMatchNumber.value === matchNum) {
+      return 0
+    }
   }
-  if (matchNum === 102) return 0 // SF
-  
-  return 0
 }
 
 // Split matches into left and right brackets
 const leftBracketMatches = computed(() => {
-  return knockoutMatches.value.filter(match => 
-    match.num >= 73 && match.num <= 80 || // Ro32 left
-    match.num >= 89 && match.num <= 92 || // Ro16 left
-    match.num >= 97 && match.num <= 98 || // QF left
-    match.num === 101 // SF left
-  )
+  return knockoutMatches.value.filter(match => allLeftBrackNumber.value.includes(match.num))
 })
 
 const rightBracketMatches = computed(() => {
-  return knockoutMatches.value.filter(match => 
-    match.num >= 81 && match.num <= 88 || // Ro32 right
-    match.num >= 93 && match.num <= 96 || // Ro16 right
-    match.num >= 99 && match.num <= 100 || // QF right
-    match.num === 102 // SF right
-  )
+  return knockoutMatches.value.filter(match => allRightBrackNumber.value.includes(match.num))
 })
 
 // Sorted matches by bracket slot for proper connector alignment
 const leftRo32Matches = computed(() => 
-  leftBracketMatches.value.filter(m => m.round === 'Round of 32').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+  leftRoundOf32MatchNumbers.value
+    .map(num => leftBracketMatches.value.find(m => m.num === num))
+    .filter(Boolean)
 )
 
 const leftRo16Matches = computed(() => 
-  leftBracketMatches.value.filter(m => m.round === 'Round of 16').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+  leftRoundOf16MatchNumbers.value
+    .map(num => leftBracketMatches.value.find(m => m.num === num))
+    .filter(Boolean)
 )
 
 const leftQFMatches = computed(() => 
-  leftBracketMatches.value.filter(m => m.round === 'Quarter-final').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+  leftQuarterFinalMatchNumbers.value
+    .map(num => leftBracketMatches.value.find(m => m.num === num))
+    .filter(Boolean)
 )
 
 const leftSFMatches = computed(() => 
-  leftBracketMatches.value.filter(m => m.round === 'Semi-final').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+  [leftSemiFinalMatchNumber.value]
+    .map(num => leftBracketMatches.value.find(m => m.num === num))
+    .filter(Boolean)
 )
 
 const rightRo32Matches = computed(() => 
-  rightBracketMatches.value.filter(m => m.round === 'Round of 32').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+  rightRoundOf32MatchNumbers.value
+    .map(num => rightBracketMatches.value.find(m => m.num === num))
+    .filter(Boolean)
 )
 
 const rightRo16Matches = computed(() => 
-  rightBracketMatches.value.filter(m => m.round === 'Round of 16').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+  rightRoundOf16MatchNumbers.value
+    .map(num => rightBracketMatches.value.find(m => m.num === num))
+    .filter(Boolean)
 )
 
 const rightQFMatches = computed(() => 
-  rightBracketMatches.value.filter(m => m.round === 'Quarter-final').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+  rightQuarterFinalMatchNumbers.value
+    .map(num => rightBracketMatches.value.find(m => m.num === num))
+    .filter(Boolean)
 )
 
 const rightSFMatches = computed(() => 
-  rightBracketMatches.value.filter(m => m.round === 'Semi-final').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+  [rightSemiFinalMatchNumber.value]
+    .map(num => rightBracketMatches.value.find(m => m.num === num))
+    .filter(Boolean)
 )
 
 const finalMatch = computed(() => {
@@ -249,20 +275,20 @@ const getRelativeRect = (el, container) => {
 
 
 const leftBracketPairs = [
-  { sources: [73, 74], target: 89 },
-  { sources: [75, 76], target: 90 },
-  { sources: [77, 78], target: 91 },
-  { sources: [79, 80], target: 92 },
+  { sources: [74, 77], target: 89 },
+  { sources: [73, 75], target: 90 },
+  { sources: [83, 84], target: 91 },
+  { sources: [81, 82], target: 92 },
   { sources: [89, 90], target: 97 },
   { sources: [91, 92], target: 98 },
   { sources: [97, 98], target: 101 },
 ]
 
 const rightBracketPairs = [
-  { sources: [81, 82], target: 93 },
-  { sources: [83, 84], target: 94 },
-  { sources: [85, 86], target: 95 },
-  { sources: [87, 88], target: 96 },
+  { sources: [76, 78], target: 93 },
+  { sources: [79, 80], target: 94 },
+  { sources: [86, 88], target: 95 },
+  { sources: [85, 87], target: 96 },
   { sources: [93, 94], target: 99 },
   { sources: [95, 96], target: 100 },
   { sources: [99, 100], target: 102 },
@@ -359,7 +385,7 @@ const selectWinner = (match, team) => {
     <div v-else class="bracket-container">
       <!-- Left Bracket -->
       <div class="bracket-side left-bracket" ref="leftBracketEl">
-        <svg class="connector-svg" ref="leftSvg" viewBox="leftSvgViewBox">
+        <svg class="connector-svg" ref="leftSvg" :viewBox="leftSvgViewBox">
           <path 
             v-for="path in leftConnectorPaths" 
             :key="path.id"
