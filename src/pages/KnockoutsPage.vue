@@ -277,19 +277,19 @@ const getRelativeRect = (el, container) => {
 const leftBracketPairs = [
   { sources: [74, 77], target: 89 },
   { sources: [73, 75], target: 90 },
-  { sources: [83, 84], target: 91 },
-  { sources: [81, 82], target: 92 },
+  { sources: [83, 84], target: 93 },
+  { sources: [81, 82], target: 94 },
   { sources: [89, 90], target: 97 },
-  { sources: [91, 92], target: 98 },
+  { sources: [93, 94], target: 98 },
   { sources: [97, 98], target: 101 },
 ]
 
 const rightBracketPairs = [
-  { sources: [76, 78], target: 93 },
-  { sources: [79, 80], target: 94 },
+  { sources: [76, 78], target: 91 },
+  { sources: [79, 80], target: 92 },
   { sources: [86, 88], target: 95 },
   { sources: [85, 87], target: 96 },
-  { sources: [93, 94], target: 99 },
+  { sources: [91, 92], target: 99 },
   { sources: [95, 96], target: 100 },
   { sources: [99, 100], target: 102 },
 ]
