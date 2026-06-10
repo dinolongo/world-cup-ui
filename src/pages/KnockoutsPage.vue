@@ -4,6 +4,7 @@ import matchStadiumData from '../data/match-stadium.json'
 import stadiumData from '../data/stadium-data.json'
 import { usePredictionStore } from '../stores/predictionStore'
 import { teamCrests } from '../data/constants'
+import KnockoutMatchCard from '../components/KnockoutMatchCard.vue'
 
 const predictionStore = usePredictionStore()
 
@@ -157,6 +158,33 @@ onMounted(() => {
   loading.value = false
 })
 
+// Split matches into left and right brackets
+const leftBracketMatches = computed(() => {
+  return knockoutMatches.value.filter(match => 
+    match.num >= 73 && match.num <= 80 || // Ro32 left
+    match.num >= 89 && match.num <= 92 || // Ro16 left
+    match.num >= 97 && match.num <= 98 || // QF left
+    match.num === 101 // SF left
+  )
+})
+
+const rightBracketMatches = computed(() => {
+  return knockoutMatches.value.filter(match => 
+    match.num >= 81 && match.num <= 88 || // Ro32 right
+    match.num >= 93 && match.num <= 96 || // Ro16 right
+    match.num >= 99 && match.num <= 100 || // QF right
+    match.num === 102 // SF right
+  )
+})
+
+const finalMatch = computed(() => {
+  return knockoutMatches.value.find(match => match.round === 'Final')
+})
+
+const thirdPlaceMatch = computed(() => {
+  return knockoutMatches.value.find(match => match.round === 'Match for third place')
+})
+
 // Get stadium details by name
 const getStadium = (groundName) => {
   return stadiums.value.find(stadium => stadium.name === groundName) || null
@@ -230,10 +258,6 @@ const formatTeamNamePlaceholder = (teamCode) => {
   return teamCode
 }
 
-// Get team crest URL
-const getTeamCrest = (teamName) => {
-  return teamCrests[teamName] || null
-}
 
 // Store for knockout predictions
 const knockoutPredictions = ref({})
@@ -273,266 +297,166 @@ const selectWinner = (match, team) => {
     </div>
     
     <div v-else class="bracket-container">
-      <!-- Round of 32 -->
-      <div class="round">
-        <h2>Round of 32</h2>
-        <div class="matches">
-          <div 
-            v-for="match in knockoutMatches.filter(m => m.round === 'Round of 32')" 
-            :key="match.num"
-            class="match-card"
-          >
-            <div class="match-info">
-              <span class="date-time">{{ formatDate(match.date) }} • {{ formatTime(match.time) }}</span>
-              <span class="stadium">{{ getStadium(match.ground)?.name || match.ground }}</span>
-              <span class="city">{{ getStadium(match.ground)?.city || '' }}</span>
-            </div>
-            <div class="teams">
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team1, match.num, match.team2))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  :src="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team1, match.num, match.team2) }}
-              </button>
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team2, match.num, match.team1))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  :src="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team2, match.num, match.team1) }}
-              </button>
-            </div>
+      <!-- Left Bracket -->
+      <div class="bracket-side left-bracket">
+        <h2>Left Bracket</h2>
+        
+        <!-- Round of 32 -->
+        <div class="round-section">
+          <h3>Round of 32</h3>
+          <div class="matches">
+            <KnockoutMatchCard
+              v-for="match in leftBracketMatches.filter(m => m.round === 'Round of 32')"
+              :key="match.num"
+              :match="match"
+              :team1-name="getTeamName(match.team1, match.num, match.team2)"
+              :team2-name="getTeamName(match.team2, match.num, match.team1)"
+              :stadium="getStadium(match.ground)"
+              @select-winner="selectWinner(match, $event)"
+            />
+          </div>
+        </div>
+
+        <!-- Round of 16 -->
+        <div class="round-section">
+          <h3>Round of 16</h3>
+          <div class="matches">
+            <KnockoutMatchCard
+              v-for="match in leftBracketMatches.filter(m => m.round === 'Round of 16')"
+              :key="match.num"
+              :match="match"
+              :team1-name="getTeamName(match.team1, match.num, match.team2)"
+              :team2-name="getTeamName(match.team2, match.num, match.team1)"
+              :stadium="getStadium(match.ground)"
+              @select-winner="selectWinner(match, $event)"
+            />
+          </div>
+        </div>
+
+        <!-- Quarter Finals -->
+        <div class="round-section">
+          <h3>Quarter Finals</h3>
+          <div class="matches">
+            <KnockoutMatchCard
+              v-for="match in leftBracketMatches.filter(m => m.round === 'Quarter-final')"
+              :key="match.num"
+              :match="match"
+              :team1-name="getTeamName(match.team1, match.num, match.team2)"
+              :team2-name="getTeamName(match.team2, match.num, match.team1)"
+              :stadium="getStadium(match.ground)"
+              @select-winner="selectWinner(match, $event)"
+            />
+          </div>
+        </div>
+
+        <!-- Semi Final -->
+        <div class="round-section">
+          <h3>Semi Final</h3>
+          <div class="matches">
+            <KnockoutMatchCard
+              v-for="match in leftBracketMatches.filter(m => m.round === 'Semi-final')"
+              :key="match.num"
+              :match="match"
+              :team1-name="getTeamName(match.team1, match.num, match.team2)"
+              :team2-name="getTeamName(match.team2, match.num, match.team1)"
+              :stadium="getStadium(match.ground)"
+              @select-winner="selectWinner(match, $event)"
+            />
           </div>
         </div>
       </div>
 
-      <!-- Round of 16 -->
-      <div class="round">
-        <h2>Round of 16</h2>
-        <div class="matches">
-          <div 
-            v-for="match in knockoutMatches.filter(m => m.round === 'Round of 16')" 
-            :key="match.num"
-            class="match-card"
-          >
-            <div class="match-info">
-              <span class="date-time">{{ formatDate(match.date) }} • {{ formatTime(match.time) }}</span>
-              <span class="stadium">{{ getStadium(match.ground)?.name || match.ground }}</span>
-              <span class="city">{{ getStadium(match.ground)?.city || '' }}</span>
-            </div>
-            <div class="teams">
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team1, match.num, match.team2))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  :src="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team1, match.num, match.team2) }}
-              </button>
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team2, match.num, match.team1))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  :src="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team2, match.num, match.team1) }}
-              </button>
-            </div>
-          </div>
+      <!-- Center Section (Final & Third Place) -->
+      <div class="center-section">
+        <div v-if="thirdPlaceMatch" class="third-place-section">
+          <h2>Third Place Match</h2>
+          <KnockoutMatchCard
+            :match="thirdPlaceMatch"
+            :team1-name="getTeamName(thirdPlaceMatch.team1, thirdPlaceMatch.num, thirdPlaceMatch.team2)"
+            :team2-name="getTeamName(thirdPlaceMatch.team2, thirdPlaceMatch.num, thirdPlaceMatch.team1)"
+            :stadium="getStadium(thirdPlaceMatch.ground)"
+            @select-winner="selectWinner(thirdPlaceMatch, $event)"
+          />
+        </div>
+
+        <div v-if="finalMatch" class="final-section">
+          <h2 class="final-title">Final</h2>
+          <KnockoutMatchCard
+            :match="finalMatch"
+            :team1-name="getTeamName(finalMatch.team1, finalMatch.num, finalMatch.team2)"
+            :team2-name="getTeamName(finalMatch.team2, finalMatch.num, finalMatch.team1)"
+            :stadium="getStadium(finalMatch.ground)"
+            @select-winner="selectWinner(finalMatch, $event)"
+            class="final-card"
+          />
         </div>
       </div>
 
-      <!-- Quarter Finals -->
-      <div class="round">
-        <h2>Quarter Finals</h2>
-        <div class="matches">
-          <div 
-            v-for="match in knockoutMatches.filter(m => m.round === 'Quarter-final')" 
-            :key="match.num"
-            class="match-card"
-          >
-            <div class="match-info">
-              <span class="date-time">{{ formatDate(match.date) }} • {{ formatTime(match.time) }}</span>
-              <span class="stadium">{{ getStadium(match.ground)?.name || match.ground }}</span>
-              <span class="city">{{ getStadium(match.ground)?.city || '' }}</span>
-            </div>
-            <div class="teams">
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team1, match.num, match.team2))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  :src="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team1, match.num, match.team2) }}
-              </button>
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team2, match.num, match.team1))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  :src="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team2, match.num, match.team1) }}
-              </button>
-            </div>
+      <!-- Right Bracket -->
+      <div class="bracket-side right-bracket">
+        <h2>Right Bracket</h2>
+        
+        <!-- Round of 32 -->
+        <div class="round-section">
+          <h3>Round of 32</h3>
+          <div class="matches">
+            <KnockoutMatchCard
+              v-for="match in rightBracketMatches.filter(m => m.round === 'Round of 32')"
+              :key="match.num"
+              :match="match"
+              :team1-name="getTeamName(match.team1, match.num, match.team2)"
+              :team2-name="getTeamName(match.team2, match.num, match.team1)"
+              :stadium="getStadium(match.ground)"
+              @select-winner="selectWinner(match, $event)"
+            />
           </div>
         </div>
-      </div>
 
-      <!-- Semi Finals -->
-      <div class="round">
-        <h2>Semi Finals</h2>
-        <div class="matches">
-          <div 
-            v-for="match in knockoutMatches.filter(m => m.round === 'Semi-final')" 
-            :key="match.num"
-            class="match-card"
-          >
-            <div class="match-info">
-              <span class="date-time">{{ formatDate(match.date) }} • {{ formatTime(match.time) }}</span>
-              <span class="stadium">{{ getStadium(match.ground)?.name || match.ground }}</span>
-              <span class="city">{{ getStadium(match.ground)?.city || '' }}</span>
-            </div>
-            <div class="teams">
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team1, match.num, match.team2))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  :src="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team1, match.num, match.team2) }}
-              </button>
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team2, match.num, match.team1))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  :src="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team2, match.num, match.team1) }}
-              </button>
-            </div>
+        <!-- Round of 16 -->
+        <div class="round-section">
+          <h3>Round of 16</h3>
+          <div class="matches">
+            <KnockoutMatchCard
+              v-for="match in rightBracketMatches.filter(m => m.round === 'Round of 16')"
+              :key="match.num"
+              :match="match"
+              :team1-name="getTeamName(match.team1, match.num, match.team2)"
+              :team2-name="getTeamName(match.team2, match.num, match.team1)"
+              :stadium="getStadium(match.ground)"
+              @select-winner="selectWinner(match, $event)"
+            />
           </div>
         </div>
-      </div>
 
-      <!-- Third Place Match -->
-      <div class="round">
-        <h2>Third Place Match</h2>
-        <div class="matches">
-          <div 
-            v-for="match in knockoutMatches.filter(m => m.round === 'Match for third place')" 
-            :key="match.num"
-            class="match-card"
-          >
-            <div class="match-info">
-              <span class="date-time">{{ formatDate(match.date) }} • {{ formatTime(match.time) }}</span>
-              <span class="stadium">{{ getStadium(match.ground)?.name || match.ground }}</span>
-              <span class="city">{{ getStadium(match.ground)?.city || '' }}</span>
-            </div>
-            <div class="teams">
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team1, match.num, match.team2))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  :src="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team1, match.num, match.team2) }}
-              </button>
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team2, match.num, match.team1))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  :src="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team2, match.num, match.team1) }}
-              </button>
-            </div>
+        <!-- Quarter Finals -->
+        <div class="round-section">
+          <h3>Quarter Finals</h3>
+          <div class="matches">
+            <KnockoutMatchCard
+              v-for="match in rightBracketMatches.filter(m => m.round === 'Quarter-final')"
+              :key="match.num"
+              :match="match"
+              :team1-name="getTeamName(match.team1, match.num, match.team2)"
+              :team2-name="getTeamName(match.team2, match.num, match.team1)"
+              :stadium="getStadium(match.ground)"
+              @select-winner="selectWinner(match, $event)"
+            />
           </div>
         </div>
-      </div>
 
-      <!-- Final -->
-      <div class="round final">
-        <h2>Final</h2>
-        <div class="matches">
-          <div 
-            v-for="match in knockoutMatches.filter(m => m.round === 'Final')" 
-            :key="match.num"
-            class="match-card final-card"
-          >
-            <div class="match-info">
-              <span class="date-time">{{ formatDate(match.date) }} • {{ formatTime(match.time) }}</span>
-              <span class="stadium">{{ getStadium(match.ground)?.name || match.ground }}</span>
-              <span class="city">{{ getStadium(match.ground)?.city || '' }}</span>
-            </div>
-            <div class="teams">
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team1, match.num, match.team2))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  :src="getTeamCrest(getTeamName(match.team1, match.num, match.team2))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team1, match.num, match.team2) }}
-              </button>
-              <button 
-                class="team-button"
-                @click="selectWinner(match, getTeamName(match.team2, match.num, match.team1))"
-              >
-                <img 
-                  v-if="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  :src="getTeamCrest(getTeamName(match.team2, match.num, match.team1))" 
-                  class="team-flag"
-                  alt=""
-                />
-                {{ getTeamName(match.team2, match.num, match.team1) }}
-              </button>
-            </div>
+        <!-- Semi Final -->
+        <div class="round-section">
+          <h3>Semi Final</h3>
+          <div class="matches">
+            <KnockoutMatchCard
+              v-for="match in rightBracketMatches.filter(m => m.round === 'Semi-final')"
+              :key="match.num"
+              :match="match"
+              :team1-name="getTeamName(match.team1, match.num, match.team2)"
+              :team2-name="getTeamName(match.team2, match.num, match.team1)"
+              :stadium="getStadium(match.ground)"
+              @select-winner="selectWinner(match, $event)"
+            />
           </div>
         </div>
       </div>
@@ -568,108 +492,92 @@ h1 {
   display: flex;
   gap: 40px;
   width: 100%;
-  max-width: 1600px;
+  max-width: 1800px;
   overflow-x: auto;
   padding: 20px;
+  align-items: flex-start;
 }
 
-.round {
+.bracket-side {
   flex: 1;
-  min-width: 200px;
+  min-width: 280px;
 }
 
-.round h2 {
+.bracket-side h2 {
   color: white;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.round-section {
+  margin-bottom: 24px;
+}
+
+.round-section h3 {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 12px;
 }
 
 .matches {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.match-card {
-  background: white;
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.center-section {
+  flex: 0 0 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
 }
 
-.match-card.final-card {
+.third-place-section h2,
+.final-section h2 {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.final-title {
+  font-size: 24px;
+  color: #ffd700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.final-card :deep(.knockout-match-card) {
   border: 3px solid #ffd700;
   box-shadow: 0 4px 16px rgba(255, 215, 0, 0.3);
 }
 
-.match-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: #666;
-}
-
-.date-time {
-  font-weight: 600;
-  color: #333;
-}
-
-.stadium {
-  color: #666;
-  font-weight: 500;
-}
-
-.city {
-  color: #999;
-  font-size: 11px;
-}
-
-.teams {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.team-button {
-  background: #f5f5f5;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #333;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-}
-
-.team-button:hover {
-  background: #e8f4e8;
-  border-color: #4caf50;
-  color: #2e7d32;
-}
-
-.team-button:active {
-  transform: scale(0.98);
-}
-
-.final .team-button:hover {
+.final-card :deep(.team-button:hover) {
   background: #fff8e1;
   border-color: #ffc107;
   color: #f57c00;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .bracket-container {
     flex-direction: column;
     align-items: center;
   }
   
-  .round {
+  .bracket-side {
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .center-section {
+    flex: none;
     width: 100%;
     max-width: 400px;
   }
