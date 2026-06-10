@@ -200,8 +200,8 @@ const continueToKnockout = () => {
         <div 
           v-for="teamData in getThirdPlaceTeams()" 
           :key="teamData.team.teamName"
-          :class="['third-place-card', { selected: isSelected(teamData) }]"
-          @click="toggleThirdPlaceTeam(teamData)"
+          :class="['third-place-card', { selected: predictionStore.isSelected(teamData) }]"
+          @click="predictionStore.toggleThirdPlaceTeam(teamData)"
         >
           <div class="card-header">
             <span class="group-label">{{ formatGroupName(teamData.groupName) }}</span>
