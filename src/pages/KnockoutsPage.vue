@@ -49,6 +49,55 @@ const setCardRef = (el, matchNum) => {
   if (el) cardRefs.value[matchNum] = el.$el  // $el gives the root DOM node
 }
 
+// Get bracket slot for a match number (vertical position in bracket)
+const getBracketSlot = (matchNum) => {
+  // Left bracket slots
+  if (matchNum >= 73 && matchNum <= 80) {
+    // Ro32: pairs that feed into Ro16 matches
+    if (matchNum === 73 || matchNum === 74) return 0
+    if (matchNum === 75 || matchNum === 76) return 1
+    if (matchNum === 77 || matchNum === 78) return 2
+    if (matchNum === 79 || matchNum === 80) return 3
+  }
+  if (matchNum >= 89 && matchNum <= 92) {
+    // Ro16: pairs that feed into QF matches
+    if (matchNum === 89) return 0
+    if (matchNum === 90) return 1
+    if (matchNum === 91) return 2
+    if (matchNum === 92) return 3
+  }
+  if (matchNum >= 97 && matchNum <= 98) {
+    // QF: pairs that feed into SF match
+    if (matchNum === 97) return 0
+    if (matchNum === 98) return 1
+  }
+  if (matchNum === 101) return 0 // SF
+  
+  // Right bracket slots
+  if (matchNum >= 81 && matchNum <= 88) {
+    // Ro32: pairs that feed into Ro16 matches
+    if (matchNum === 81 || matchNum === 82) return 0
+    if (matchNum === 83 || matchNum === 84) return 1
+    if (matchNum === 85 || matchNum === 86) return 2
+    if (matchNum === 87 || matchNum === 88) return 3
+  }
+  if (matchNum >= 93 && matchNum <= 96) {
+    // Ro16: pairs that feed into QF matches
+    if (matchNum === 93) return 0
+    if (matchNum === 94) return 1
+    if (matchNum === 95) return 2
+    if (matchNum === 96) return 3
+  }
+  if (matchNum >= 99 && matchNum <= 100) {
+    // QF: pairs that feed into SF match
+    if (matchNum === 99) return 0
+    if (matchNum === 100) return 1
+  }
+  if (matchNum === 102) return 0 // SF
+  
+  return 0
+}
+
 // Split matches into left and right brackets
 const leftBracketMatches = computed(() => {
   return knockoutMatches.value.filter(match => 
@@ -67,6 +116,39 @@ const rightBracketMatches = computed(() => {
     match.num === 102 // SF right
   )
 })
+
+// Sorted matches by bracket slot for proper connector alignment
+const leftRo32Matches = computed(() => 
+  leftBracketMatches.value.filter(m => m.round === 'Round of 32').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+)
+
+const leftRo16Matches = computed(() => 
+  leftBracketMatches.value.filter(m => m.round === 'Round of 16').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+)
+
+const leftQFMatches = computed(() => 
+  leftBracketMatches.value.filter(m => m.round === 'Quarter-final').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+)
+
+const leftSFMatches = computed(() => 
+  leftBracketMatches.value.filter(m => m.round === 'Semi-final').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+)
+
+const rightRo32Matches = computed(() => 
+  rightBracketMatches.value.filter(m => m.round === 'Round of 32').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+)
+
+const rightRo16Matches = computed(() => 
+  rightBracketMatches.value.filter(m => m.round === 'Round of 16').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+)
+
+const rightQFMatches = computed(() => 
+  rightBracketMatches.value.filter(m => m.round === 'Quarter-final').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+)
+
+const rightSFMatches = computed(() => 
+  rightBracketMatches.value.filter(m => m.round === 'Semi-final').sort((a, b) => getBracketSlot(a.num) - getBracketSlot(b.num) || a.num - b.num)
+)
 
 const finalMatch = computed(() => {
   return knockoutMatches.value.find(match => match.round === 'Final')
@@ -292,9 +374,10 @@ const selectWinner = (match, team) => {
           <h3>Round of 32</h3>
           <div class="matches">
             <KnockoutMatchCard
-              v-for="match in leftBracketMatches.filter(m => m.round === 'Round of 32')"
+              v-for="match in leftRo32Matches"
               :key="match.num"
               :match="match"
+              :match-num="match.num"
               :team1-name="getTeamName(match.team1, match.num, match.team2)"
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
@@ -310,9 +393,10 @@ const selectWinner = (match, team) => {
           <h3>Round of 16</h3>
           <div class="matches">
             <KnockoutMatchCard
-              v-for="match in leftBracketMatches.filter(m => m.round === 'Round of 16')"
+              v-for="match in leftRo16Matches"
               :key="match.num"
               :match="match"
+              :match-num="match.num"
               :team1-name="getTeamName(match.team1, match.num, match.team2)"
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
@@ -327,9 +411,10 @@ const selectWinner = (match, team) => {
           <h3>Quarter Finals</h3>
           <div class="matches">
             <KnockoutMatchCard
-              v-for="match in leftBracketMatches.filter(m => m.round === 'Quarter-final')"
+              v-for="match in leftQFMatches"
               :key="match.num"
               :match="match"
+              :match-num="match.num"
               :team1-name="getTeamName(match.team1, match.num, match.team2)"
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
@@ -344,9 +429,10 @@ const selectWinner = (match, team) => {
           <h3>Semi Final</h3>
           <div class="matches">
             <KnockoutMatchCard
-              v-for="match in leftBracketMatches.filter(m => m.round === 'Semi-final')"
+              v-for="match in leftSFMatches"
               :key="match.num"
               :match="match"
+              :match-num="match.num"
               :team1-name="getTeamName(match.team1, match.num, match.team2)"
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
@@ -363,6 +449,7 @@ const selectWinner = (match, team) => {
           <h2>Third Place Match</h2>
           <KnockoutMatchCard
             :match="thirdPlaceMatch"
+            :match-num="thirdPlaceMatch.num"
             :team1-name="getTeamName(thirdPlaceMatch.team1, thirdPlaceMatch.num, thirdPlaceMatch.team2)"
             :team2-name="getTeamName(thirdPlaceMatch.team2, thirdPlaceMatch.num, thirdPlaceMatch.team1)"
             :stadium="getStadium(thirdPlaceMatch.ground)"
@@ -375,6 +462,7 @@ const selectWinner = (match, team) => {
           <h2 class="final-title">Final</h2>
           <KnockoutMatchCard
             :match="finalMatch"
+            :match-num="finalMatch.num"
             :team1-name="getTeamName(finalMatch.team1, finalMatch.num, finalMatch.team2)"
             :team2-name="getTeamName(finalMatch.team2, finalMatch.num, finalMatch.team1)"
             :stadium="getStadium(finalMatch.ground)"
@@ -402,9 +490,10 @@ const selectWinner = (match, team) => {
           <h3>Round of 32</h3>
           <div class="matches">
             <KnockoutMatchCard
-              v-for="match in rightBracketMatches.filter(m => m.round === 'Round of 32')"
+              v-for="match in rightRo32Matches"
               :key="match.num"
               :match="match"
+              :match-num="match.num"
               :team1-name="getTeamName(match.team1, match.num, match.team2)"
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
@@ -419,9 +508,10 @@ const selectWinner = (match, team) => {
           <h3>Round of 16</h3>
           <div class="matches">
             <KnockoutMatchCard
-              v-for="match in rightBracketMatches.filter(m => m.round === 'Round of 16')"
+              v-for="match in rightRo16Matches"
               :key="match.num"
               :match="match"
+              :match-num="match.num"
               :team1-name="getTeamName(match.team1, match.num, match.team2)"
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
@@ -436,9 +526,10 @@ const selectWinner = (match, team) => {
           <h3>Quarter Finals</h3>
           <div class="matches">
             <KnockoutMatchCard
-              v-for="match in rightBracketMatches.filter(m => m.round === 'Quarter-final')"
+              v-for="match in rightQFMatches"
               :key="match.num"
               :match="match"
+              :match-num="match.num"
               :team1-name="getTeamName(match.team1, match.num, match.team2)"
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
@@ -453,9 +544,10 @@ const selectWinner = (match, team) => {
           <h3>Semi Final</h3>
           <div class="matches">
             <KnockoutMatchCard
-              v-for="match in rightBracketMatches.filter(m => m.round === 'Semi-final')"
+              v-for="match in rightSFMatches"
               :key="match.num"
               :match="match"
+              :match-num="match.num"
               :team1-name="getTeamName(match.team1, match.num, match.team2)"
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
