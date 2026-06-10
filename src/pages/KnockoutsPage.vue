@@ -1,12 +1,18 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import matchStadiumData from '../data/match-stadium.json'
 import stadiumData from '../data/stadium-data.json'
+import { usePredictionStore } from '../stores/predictionStore'
+
+const predictionStore = usePredictionStore()
 
 // Reactive state
 const knockoutMatches = ref([])
 const stadiums = ref([])
 const loading = ref(true)
+
+// Get third-place seeding lookup
+const thirdPlaceSeeding = computed(() => predictionStore.getThirdPlaceSeeding())
 
 // Load data
 onMounted(() => {
@@ -40,18 +46,9 @@ const formatTime = (timeStr) => {
   return timeStr
 }
 
-// Format team name to show "Winner of Group X" instead of codes like "1A", "2B"
-const formatTeamName = (teamCode) => {
+// Get team name from code, using predictions if available
+const getTeamName = (teamCode, matchNum) => {
   if (!teamCode) return 'TBD'
-  
-  // Handle group position codes (1A, 2B, 3C, etc.)
-  const groupMatch = teamCode.match(/^(\d)([A-L])$/)
-  if (groupMatch) {
-    const position = groupMatch[1]
-    const group = groupMatch[2]
-    const positionText = position === '1' ? 'Winner' : position === '2' ? 'Runner-up' : '3rd Place'
-    return `${positionText} of Group ${group}`
-  }
   
   // Handle winner references (W74, W77, etc.)
   if (teamCode.startsWith('W')) {
@@ -65,9 +62,43 @@ const formatTeamName = (teamCode) => {
     return `Loser of Match ${matchNum}`
   }
   
-  // Handle 3rd place team codes (3A/B/C/D/F, etc.)
-  if (teamCode.startsWith('3')) {
+  // Handle 3rd place team codes with multiple groups (3A/B/C/D/F, etc.)
+  if (teamCode.includes('/')) {
+    // Use seeding lookup to determine which third-place team plays here
+    if (thirdPlaceSeeding.value && matchNum) {
+      const seedingKey = Object.keys(thirdPlaceSeeding.value).find(key => 
+        thirdPlaceSeeding.value[key] === teamCode
+      )
+      if (seedingKey) {
+        // Find which position this match corresponds to
+        for (const [position, code] of Object.entries(thirdPlaceSeeding.value)) {
+          if (code === teamCode) {
+            const teamName = predictionStore.getTeamFromCode(code)
+            if (teamName) return teamName
+          }
+        }
+      }
+    }
     return 'Best 3rd Place Team'
+  }
+  
+  // Try to get predicted team from store
+  const predictedTeam = predictionStore.getTeamFromCode(teamCode)
+  if (predictedTeam) return predictedTeam
+  
+  // Fallback to formatted placeholder
+  return formatTeamNamePlaceholder(teamCode)
+}
+
+// Format team name placeholder when no prediction available
+const formatTeamNamePlaceholder = (teamCode) => {
+  // Handle group position codes (1A, 2B, 3C, etc.)
+  const groupMatch = teamCode.match(/^(\d)([A-L])$/)
+  if (groupMatch) {
+    const position = groupMatch[1]
+    const group = groupMatch[2]
+    const positionText = position === '1' ? 'Winner' : position === '2' ? 'Runner-up' : '3rd Place'
+    return `${positionText} of Group ${group}`
   }
   
   return teamCode
@@ -108,13 +139,13 @@ const selectWinner = (match, team) => {
                 class="team-button"
                 @click="selectWinner(match, match.team1)"
               >
-                {{ formatTeamName(match.team1) }}
+                {{ getTeamName(match.team1, match.num) }}
               </button>
               <button 
                 class="team-button"
                 @click="selectWinner(match, match.team2)"
               >
-                {{ formatTeamName(match.team2) }}
+                {{ getTeamName(match.team2, match.num) }}
               </button>
             </div>
           </div>
@@ -140,13 +171,13 @@ const selectWinner = (match, team) => {
                 class="team-button"
                 @click="selectWinner(match, match.team1)"
               >
-                {{ formatTeamName(match.team1) }}
+                {{ getTeamName(match.team1, match.num) }}
               </button>
               <button 
                 class="team-button"
                 @click="selectWinner(match, match.team2)"
               >
-                {{ formatTeamName(match.team2) }}
+                {{ getTeamName(match.team2, match.num) }}
               </button>
             </div>
           </div>
@@ -172,13 +203,13 @@ const selectWinner = (match, team) => {
                 class="team-button"
                 @click="selectWinner(match, match.team1)"
               >
-                {{ formatTeamName(match.team1) }}
+                {{ getTeamName(match.team1, match.num) }}
               </button>
               <button 
                 class="team-button"
                 @click="selectWinner(match, match.team2)"
               >
-                {{ formatTeamName(match.team2) }}
+                {{ getTeamName(match.team2, match.num) }}
               </button>
             </div>
           </div>
@@ -204,13 +235,13 @@ const selectWinner = (match, team) => {
                 class="team-button"
                 @click="selectWinner(match, match.team1)"
               >
-                {{ formatTeamName(match.team1) }}
+                {{ getTeamName(match.team1, match.num) }}
               </button>
               <button 
                 class="team-button"
                 @click="selectWinner(match, match.team2)"
               >
-                {{ formatTeamName(match.team2) }}
+                {{ getTeamName(match.team2, match.num) }}
               </button>
             </div>
           </div>
@@ -236,13 +267,13 @@ const selectWinner = (match, team) => {
                 class="team-button"
                 @click="selectWinner(match, match.team1)"
               >
-                {{ formatTeamName(match.team1) }}
+                {{ getTeamName(match.team1, match.num) }}
               </button>
               <button 
                 class="team-button"
                 @click="selectWinner(match, match.team2)"
               >
-                {{ formatTeamName(match.team2) }}
+                {{ getTeamName(match.team2, match.num) }}
               </button>
             </div>
           </div>
@@ -268,13 +299,13 @@ const selectWinner = (match, team) => {
                 class="team-button"
                 @click="selectWinner(match, match.team1)"
               >
-                {{ formatTeamName(match.team1) }}
+                {{ getTeamName(match.team1, match.num) }}
               </button>
               <button 
                 class="team-button"
                 @click="selectWinner(match, match.team2)"
               >
-                {{ formatTeamName(match.team2) }}
+                {{ getTeamName(match.team2, match.num) }}
               </button>
             </div>
           </div>

@@ -189,7 +189,7 @@ const continueToKnockout = () => {
     <div v-else-if="currentStep === 'third-place'" class="step-container">
       <h2>Step 2: Select 8 Third-Place Teams</h2>
       <p class="step-description">
-        Select 8 of the 16 third-place teams to advance to the Round of 32
+        Select 8 of the 12 third-place teams to advance to the Round of 32
       </p>
       
       <div class="selection-counter">
