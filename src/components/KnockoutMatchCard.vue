@@ -83,8 +83,8 @@ const handleTeamClick = (team) => {
   border-radius: 8px;
   padding: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-width: 180px;
-  max-width: 200px;
+  min-width: 130px;   /* was 108px */
+  max-width: 144px;   /* was 120px */
 }
 
 .match-info {

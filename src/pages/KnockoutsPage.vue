@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted, nextTick } from 'vue'
 import matchStadiumData from '../data/match-stadium.json'
 import stadiumData from '../data/stadium-data.json'
 import { usePredictionStore } from '../stores/predictionStore'
@@ -11,13 +11,17 @@ const predictionStore = usePredictionStore()
 const knockoutMatches = ref([])
 const stadiums = ref([])
 const loading = ref(true)
+const cardRefs = ref({})
+const leftBracketEl = ref(null)
+const leftConnectorPaths = ref([])
+const rightBracketEl = ref(null)
+const rightConnectorPaths = ref([])
 
 // Get third-place seeding lookup
 const thirdPlaceSeeding = computed(() => predictionStore.getThirdPlaceSeeding())
 
 // Load data
-onMounted(() => {
-  // Filter for knockout stage matches only
+onMounted(async () => {
   knockoutMatches.value = matchStadiumData.matches.filter(match => 
     match.round === 'Round of 32' || 
     match.round === 'Round of 16' || 
@@ -26,10 +30,22 @@ onMounted(() => {
     match.round === 'Match for third place' || 
     match.round === 'Final'
   )
-  
   stadiums.value = stadiumData.stadiums
   loading.value = false
+
+  await nextTick()
+  recalculatePaths()
+
+  window.addEventListener('resize', recalculatePaths)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('resize', recalculatePaths)
+})
+
+const setCardRef = (el, matchNum) => {
+  if (el) cardRefs.value[matchNum] = el.$el  // $el gives the root DOM node
+}
 
 // Split matches into left and right brackets
 const leftBracketMatches = computed(() => {
@@ -135,6 +151,84 @@ const formatTeamNamePlaceholder = (teamCode) => {
 // Store for knockout predictions
 const knockoutPredictions = ref({})
 
+const getRelativeRect = (el, container) => {
+  const elRect = el.getBoundingClientRect()
+  const containerRect = container.getBoundingClientRect()
+  return {
+    top: elRect.top - containerRect.top,
+    bottom: elRect.bottom - containerRect.top,
+    left: elRect.left - containerRect.left,
+    right: elRect.right - containerRect.left,
+    midY: (elRect.top + elRect.bottom) / 2 - containerRect.top
+  }
+}
+
+const leftBracketPairs = [
+  { sources: [73, 74], target: 89 },
+  { sources: [75, 76], target: 90 },
+  { sources: [77, 78], target: 91 },
+  { sources: [79, 80], target: 92 },
+  { sources: [89, 90], target: 97 },
+  { sources: [91, 92], target: 98 },
+  { sources: [97, 98], target: 101 },
+]
+
+const rightBracketPairs = [
+  { sources: [81, 82], target: 93 },
+  { sources: [83, 84], target: 94 },
+  { sources: [85, 86], target: 95 },
+  { sources: [87, 88], target: 96 },
+  { sources: [93, 94], target: 99 },
+  { sources: [95, 96], target: 100 },
+  { sources: [99, 100], target: 102 },
+]
+
+const calculatePaths = (pairs, containerEl, direction = 'left') => {
+  if (!containerEl) return []
+  const paths = []
+
+  for (const pair of pairs) {
+    const el1 = cardRefs.value[pair.sources[0]]
+    const el2 = cardRefs.value[pair.sources[1]]
+    const elTarget = cardRefs.value[pair.target]
+    if (!el1 || !el2 || !elTarget) continue
+
+    const r1 = getRelativeRect(el1, containerEl)
+    const r2 = getRelativeRect(el2, containerEl)
+    const rT = getRelativeRect(elTarget, containerEl)
+
+    // For left bracket: lines exit right edge of source, enter left edge of target
+    // For right bracket: lines exit left edge of source, enter right edge of target
+    const x1 = direction === 'left' ? r1.right : r1.left
+    const x2 = direction === 'left' ? r2.right : r2.left
+    const xT = direction === 'left' ? rT.left : rT.right
+
+    const y1 = r1.midY
+    const y2 = r2.midY
+    const yT = rT.midY
+    const midY = (y1 + y2) / 2
+    const midX = (x1 + xT) / 2
+
+    // From card1: go horizontal to midX, drop to midY
+    // From card2: go horizontal to midX, rise to midY  
+    // Then from midY go horizontal into target card
+    const d = `
+      M ${x1} ${y1} H ${midX} V ${midY}
+      M ${x2} ${y2} H ${midX} V ${midY}
+      M ${midX} ${midY} H ${xT}
+    `.trim()
+
+    paths.push({ id: `${pair.sources[0]}-${pair.sources[1]}`, d })
+  }
+
+  return paths
+}
+
+const recalculatePaths = () => {
+  leftConnectorPaths.value = calculatePaths(leftBracketPairs, leftBracketEl.value, 'left')
+  rightConnectorPaths.value = calculatePaths(rightBracketPairs, rightBracketEl.value, 'right')
+}
+
 // Handle team selection with auto-advance
 const selectWinner = (match, team) => {
   // Store the winner for this match
@@ -171,8 +265,17 @@ const selectWinner = (match, team) => {
     
     <div v-else class="bracket-container">
       <!-- Left Bracket -->
-      <div class="bracket-side left-bracket">
-        
+      <div class="bracket-side left-bracket" ref="leftBracketEl">
+        <svg class="connector-svg" ref="leftSvg">
+          <path 
+            v-for="path in leftConnectorPaths" 
+            :key="path.id"
+            :d="path.d"
+            fill="none"
+            stroke="rgba(255,255,255,0.5)"
+            stroke-width="2"
+          />
+        </svg>
         <!-- Round of 32 -->
         <div class="round-section">
           <h3>Round of 32</h3>
@@ -185,6 +288,8 @@ const selectWinner = (match, team) => {
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
               @select-winner="selectWinner(match, $event)"
+                :ref="el => setCardRef(el, match.num)"
+
             />
           </div>
         </div>
@@ -201,6 +306,7 @@ const selectWinner = (match, team) => {
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
               @select-winner="selectWinner(match, $event)"
+              :ref="el => setCardRef(el, match.num)"
             />
           </div>
         </div>
@@ -217,6 +323,7 @@ const selectWinner = (match, team) => {
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
               @select-winner="selectWinner(match, $event)"
+              :ref="el => setCardRef(el, match.num)"
             />
           </div>
         </div>
@@ -233,6 +340,7 @@ const selectWinner = (match, team) => {
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
               @select-winner="selectWinner(match, $event)"
+              :ref="el => setCardRef(el, match.num)"
             />
           </div>
         </div>
@@ -248,6 +356,7 @@ const selectWinner = (match, team) => {
             :team2-name="getTeamName(thirdPlaceMatch.team2, thirdPlaceMatch.num, thirdPlaceMatch.team1)"
             :stadium="getStadium(thirdPlaceMatch.ground)"
             @select-winner="selectWinner(thirdPlaceMatch, $event)"
+            :ref="el => setCardRef(el, thirdPlaceMatch.num)"
           />
         </div>
 
@@ -260,13 +369,23 @@ const selectWinner = (match, team) => {
             :stadium="getStadium(finalMatch.ground)"
             @select-winner="selectWinner(finalMatch, $event)"
             class="final-card"
+            :ref="el => setCardRef(el, finalMatch.num)"
           />
         </div>
       </div>
 
       <!-- Right Bracket -->
-      <div class="bracket-side right-bracket">
-        
+      <div class="bracket-side right-bracket" ref="rightBracketEl">
+        <svg class="connector-svg" ref="rightSvg">
+           <path 
+            v-for="path in rightConnectorPaths" 
+            :key="path.id"
+            :d="path.d"
+            fill="none"
+            stroke="rgba(255,255,255,0.5)"
+            stroke-width="2"
+          />
+        </svg>
         <!-- Round of 32 -->
         <div class="round-section">
           <h3>Round of 32</h3>
@@ -279,6 +398,7 @@ const selectWinner = (match, team) => {
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
               @select-winner="selectWinner(match, $event)"
+              :ref="el => setCardRef(el, match.num)"
             />
           </div>
         </div>
@@ -295,6 +415,7 @@ const selectWinner = (match, team) => {
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
               @select-winner="selectWinner(match, $event)"
+              :ref="el => setCardRef(el, match.num)"
             />
           </div>
         </div>
@@ -311,6 +432,7 @@ const selectWinner = (match, team) => {
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
               @select-winner="selectWinner(match, $event)"
+              :ref="el => setCardRef(el, match.num)"
             />
           </div>
         </div>
@@ -327,6 +449,7 @@ const selectWinner = (match, team) => {
               :team2-name="getTeamName(match.team2, match.num, match.team1)"
               :stadium="getStadium(match.ground)"
               @select-winner="selectWinner(match, $event)"
+              :ref="el => setCardRef(el, match.num)"
             />
           </div>
         </div>
@@ -370,8 +493,13 @@ h1 {
 }
 
 .bracket-side {
+  position: relative;
+  display: flex;          /* ADD THESE */
+  flex-direction: row;    /* ADD THESE */
+  align-items: flex-start;
+  gap: 16px;
   flex: 1;
-  min-width: 280px;
+  min-width: 0;           /* changed from 280px */
 }
 
 .bracket-side h2 {
@@ -384,7 +512,7 @@ h1 {
 
 .round-section {
   margin-bottom: 24px;
-  flex: 0 0 220px;  /* or whatever card width you're using */
+  flex: 0 0 158px;  /* increased from 132px */
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -405,7 +533,7 @@ h1 {
 }
 
 .center-section {
-  flex: 0 0 320px;
+  flex: 0 0 230px;
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -450,12 +578,8 @@ h1 {
   }
   
   .bracket-side {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 16px;
-    flex: 1;
-    min-width: 0;
+    flex-direction: column;
+    align-items: center;
   }
   
   .center-section {
