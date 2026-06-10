@@ -81,16 +81,18 @@ const handleTeamClick = (team) => {
 .knockout-match-card {
   background: white;
   border-radius: 8px;
-  padding: 12px;
+  padding: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 180px;
+  max-width: 200px;
 }
 
 .match-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
-  font-size: 12px;
+  gap: 2px;
+  margin-bottom: 6px;
+  font-size: 10px;
   color: #666;
 }
 
@@ -119,8 +121,8 @@ const handleTeamClick = (team) => {
   background: #f5f5f5;
   border: 2px solid #e0e0e0;
   border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 6px 8px;
+  font-size: 11px;
   font-weight: 500;
   color: #333;
   cursor: pointer;
@@ -129,7 +131,7 @@ const handleTeamClick = (team) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .team-button:hover {
@@ -143,8 +145,8 @@ const handleTeamClick = (team) => {
 }
 
 .team-flag {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
   flex-shrink: 0;
 }
