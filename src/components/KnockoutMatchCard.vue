@@ -48,7 +48,7 @@ const handleTeamClick = (team) => {
 <template>
   <div class="knockout-match-card">
     <div class="match-info">
-      <!-- <span class="match-number" v-if="matchNum">#{{ matchNum }}</span> -->
+      <span class="match-number" v-if="matchNum">#{{ matchNum }}</span>
       <span class="date-time">{{ formatDate(match.date) }} • {{ formatTime(match.time) }}</span>
       <span class="stadium">{{ stadium?.name || match.ground }}</span>
       <span class="city">{{ stadium?.city || '' }}</span>

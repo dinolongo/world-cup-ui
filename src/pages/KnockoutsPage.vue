@@ -4,6 +4,7 @@ import matchStadiumData from '../data/match-stadium.json'
 import stadiumData from '../data/stadium-data.json'
 import { usePredictionStore } from '../stores/predictionStore'
 import KnockoutMatchCard from '../components/KnockoutMatchCard.vue'
+import { teamCrests } from '../data/constants'
 
 const predictionStore = usePredictionStore()
 
@@ -52,77 +53,31 @@ const setCardRef = (el, matchNum) => {
   if (el) cardRefs.value[matchNum] = el.$el  // $el gives the root DOM node
 }
 
-const leftRoundOf32MatchNumbers = ref([
+const leftRoundOf32MatchNumbers = [
   74, 77, 73, 75, 83, 84, 81, 82
-])
-const rightRoundOf32MatchNumbers = ref([
+]
+const rightRoundOf32MatchNumbers = [
   76, 78, 79, 80, 86, 88,85, 87 
-])
-const leftRoundOf16MatchNumbers = ref([
+]
+const leftRoundOf16MatchNumbers = [
   89, 90, 93, 94
-])
-const rightRoundOf16MatchNumbers = ref([
+]
+const rightRoundOf16MatchNumbers = [
   91, 92, 95, 96
-])
-const leftQuarterFinalMatchNumbers = ref([97, 98])
-const rightQuarterFinalMatchNumbers = ref([99, 100])
-const allLeftBrackNumber = ref([
-  ...leftRoundOf32MatchNumbers.value,
-  ...leftRoundOf16MatchNumbers.value,
-  ...leftQuarterFinalMatchNumbers.value
-])
-const allRightBrackNumber = ref([
-  ...rightRoundOf32MatchNumbers.value,
-  ...rightRoundOf16MatchNumbers.value,
-  ...rightQuarterFinalMatchNumbers.value
-])
-
-// Split matches into left and right brackets
-const leftBracketMatches = computed(() => {
-  return knockoutMatches.value.filter(match => allLeftBrackNumber.value.includes(match.num))
-})
-
-const rightBracketMatches = computed(() => {
-  return knockoutMatches.value.filter(match => allRightBrackNumber.value.includes(match.num))
-})
+]
+const leftQuarterFinalMatchNumbers = [97, 98]
+const rightQuarterFinalMatchNumbers = [99, 100]
 
 // Sorted matches by bracket slot for proper connector alignment
-const leftRo32Matches = computed(() => 
-  leftRoundOf32MatchNumbers.value
-    .map(num => leftBracketMatches.value.find(m => m.num === num))
-    .filter(Boolean)
-)
+const matchesForNumbers = (nums) =>
+  computed(() => nums.map(num => knockoutMatches.value.find(m => m.num === num)).filter(Boolean))
 
-const leftRo16Matches = computed(() => 
-  leftRoundOf16MatchNumbers.value
-    .map(num => leftBracketMatches.value.find(m => m.num === num))
-    .filter(Boolean)
-)
-
-const leftQFMatches = computed(() => 
-  leftQuarterFinalMatchNumbers.value
-    .map(num => leftBracketMatches.value.find(m => m.num === num))
-    .filter(Boolean)
-)
-
-
-const rightRo32Matches = computed(() => 
-  rightRoundOf32MatchNumbers.value
-    .map(num => rightBracketMatches.value.find(m => m.num === num))
-    .filter(Boolean)
-)
-
-const rightRo16Matches = computed(() => 
-  rightRoundOf16MatchNumbers.value
-    .map(num => rightBracketMatches.value.find(m => m.num === num))
-    .filter(Boolean)
-)
-
-const rightQFMatches = computed(() => 
-  rightQuarterFinalMatchNumbers.value
-    .map(num => rightBracketMatches.value.find(m => m.num === num))
-    .filter(Boolean)
-)
+const leftRo32Matches = matchesForNumbers(leftRoundOf32MatchNumbers)
+const leftRo16Matches = matchesForNumbers(leftRoundOf16MatchNumbers)
+const leftQFMatches = matchesForNumbers(leftQuarterFinalMatchNumbers)
+const rightRo32Matches = matchesForNumbers(rightRoundOf32MatchNumbers)
+const rightRo16Matches = matchesForNumbers(rightRoundOf16MatchNumbers)
+const rightQFMatches = matchesForNumbers(rightQuarterFinalMatchNumbers)
 
 
 const finalMatch = computed(() => {
@@ -140,6 +95,38 @@ const sf101Match = computed(() => {
 const sf102Match = computed(() => {
   return knockoutMatches.value.find(match => match.num === 102)
 })
+
+// Get the final winner for the winner message
+const finalWinner = computed(() => {
+  if (finalMatch.value && knockoutPredictions.value[finalMatch.value.num]) {
+    return knockoutPredictions.value[finalMatch.value.num]
+  }
+  return null
+})
+
+// Get the final runner-up for the silver message
+const finalRunnerUp = computed(() => {
+  if (finalMatch.value && knockoutPredictions.value[finalMatch.value.num]) {
+    const team1Name = getTeamName(finalMatch.value.team1, finalMatch.value.num, finalMatch.value.team2)
+    const team2Name = getTeamName(finalMatch.value.team2, finalMatch.value.num, finalMatch.value.team1)
+    const winner = knockoutPredictions.value[finalMatch.value.num]
+    return winner === team1Name ? team2Name : team1Name
+  }
+  return null
+})
+
+// Get the third place winner for the bronze message
+const thirdPlaceWinner = computed(() => {
+  if (thirdPlaceMatch.value && knockoutPredictions.value[thirdPlaceMatch.value.num]) {
+    return knockoutPredictions.value[thirdPlaceMatch.value.num]
+  }
+  return null
+})
+
+// Get the team crest for the winner
+const getWinnerCrest = (teamName) => {
+  return teamCrests[teamName] || null
+}
 
 // Get stadium details by name
 const getStadium = (groundName) => {
@@ -163,6 +150,10 @@ const getTeamName = (teamCode, matchNum, opponentCode) => {
   // Handle loser references (L101, L102, etc.)
   if (teamCode.startsWith('L')) {
     const matchNum = teamCode.substring(1)
+    // Check if we have a loser prediction for this match
+    if (knockoutLosers.value[matchNum]) {
+      return knockoutLosers.value[matchNum]
+    }
     return `Loser of Match ${matchNum}`
   }
   
@@ -207,6 +198,9 @@ const formatTeamNamePlaceholder = (teamCode) => {
 // Store for knockout predictions
 const knockoutPredictions = ref({})
 
+// Store for knockout losers (for third place match)
+const knockoutLosers = ref({})
+
 const getRelativeRect = (el, container) => {
   const elRect = el.getBoundingClientRect()
   const containerRect = container.getBoundingClientRect()
@@ -239,10 +233,26 @@ const rightBracketPairs = [
 ]
 
 const centerConnectorPairs = [
-  { sources: [97, 98], target: 101 }, // Left QF to SF
-  { sources: [99, 100], target: 102 }, // Right QF to SF
-  { sources: [101, 102], target: 103 }, // Both SF to Final
-  { sources: [101, 102], target: 104 }, // Both SF to 3rd Place
+  {
+    type: 'qf-to-sf',
+    sources: [97, 98],
+    target: 101
+  },
+  {
+    type: 'qf-to-sf',
+    sources: [99, 100],
+    target: 102
+  },
+  {
+    type: 'sf-to-final',
+    sources: [101, 102],
+    target: 104
+  },
+  {
+    type: 'sf-to-third',
+    sources: [101, 102],
+    target: 103
+  }
 ]
 
 const calculatePaths = (pairs, containerEl, direction = 'left') => {
@@ -288,32 +298,47 @@ const calculatePaths = (pairs, containerEl, direction = 'left') => {
 
 const calculateCenterPaths = (pairs, containerEl) => {
   if (!containerEl) return []
-  const paths = []
 
-  console.log('calculateCenterPaths called with containerEl:', containerEl)
-  console.log('cardRefs keys:', Object.keys(cardRefs.value))
+  const paths = []
 
   for (const pair of pairs) {
     const el1 = cardRefs.value[pair.sources[0]]
     const el2 = cardRefs.value[pair.sources[1]]
     const elTarget = cardRefs.value[pair.target]
-    
-    console.log(`Processing pair: sources [${pair.sources[0]}, ${pair.sources[1]}] -> target ${pair.target}`)
-    console.log('el1:', el1, 'el2:', el2, 'elTarget:', elTarget)
-    
-    if (!el1 || !el2 || !elTarget) {
-      console.log('Skipping pair - missing refs')
-      continue
-    }
+
+    if (!el1 || !el2 || !elTarget) continue
 
     const r1 = getRelativeRect(el1, containerEl)
     const r2 = getRelativeRect(el2, containerEl)
     const rT = getRelativeRect(elTarget, containerEl)
+    // console.log(pair)
+    // SF -> Final / Third Place
+    if (pair.type === 'sf-to-final' ) {
+      const joinX = (rT.left + rT.right) / 2
+      const joinY = rT.bottom + 30
 
-    console.log('r1:', r1, 'r2:', r2, 'rT:', rT)
+      const d = `
+        M ${r1.right} ${r1.midY}
+        H ${joinX}
+        V ${joinY}
 
-    // For center diamond: lines exit right edge of left source, left edge of right source
-    // Enter left edge of target cards
+        M ${r2.left} ${r2.midY}
+        H ${joinX}
+        V ${joinY}
+
+        M ${joinX} ${joinY}
+        V ${rT.bottom}
+      `.trim()
+
+      paths.push({
+        id: `${pair.sources[0]}-${pair.sources[1]}-${pair.target}`,
+        d
+      })
+
+      continue
+    }
+
+    // QF -> SF
     const x1 = r1.right
     const x2 = r2.left
     const xT = rT.left
@@ -321,21 +346,22 @@ const calculateCenterPaths = (pairs, containerEl) => {
     const y1 = r1.midY
     const y2 = r2.midY
     const yT = rT.midY
+
     const midY = (y1 + y2) / 2
     const midX = (x1 + xT) / 2
 
-    // Use the same merge pattern as existing bracket connectors
     const d = `
       M ${x1} ${y1} H ${midX} V ${midY}
       M ${x2} ${y2} H ${midX} V ${midY}
       M ${midX} ${midY} H ${xT}
     `.trim()
 
-    console.log('Generated path d:', d)
-    paths.push({ id: `${pair.sources[0]}-${pair.sources[1]}-${pair.target}`, d })
+    paths.push({
+      id: `${pair.sources[0]}-${pair.sources[1]}-${pair.target}`,
+      d
+    })
   }
 
-  console.log('Total paths generated:', paths.length)
   return paths
 }
 
@@ -361,6 +387,15 @@ const recalculatePaths = () => {
 const selectWinner = (match, team) => {
   // Store the winner for this match
   knockoutPredictions.value[match.num] = team
+  
+  // For semi-final matches (101, 102), track the loser for third place match
+  if (match.num === 101 || match.num === 102) {
+    const team1Name = getTeamName(match.team1, match.num, match.team2)
+    const team2Name = getTeamName(match.team2, match.num, match.team1)
+    // The loser is the team that wasn't selected as winner
+    const loser = team === team1Name ? team2Name : team1Name
+    knockoutLosers.value[match.num] = loser
+  }
   
   // Load bracket advancement data
   import('../data/bracket-advancement.json').then(data => {
@@ -476,7 +511,36 @@ const selectWinner = (match, team) => {
       <div class="center-diamond">
         <!-- Final -->
         <div class="diamond-row final-row">
+           <div v-if="finalWinner" class="winner-message">
+            <img 
+              v-if="getWinnerCrest(finalWinner)" 
+              :src="getWinnerCrest(finalWinner)" 
+              class="winner-flag"
+              alt=""
+            />
+            <span class="winner-text">{{ finalWinner }} wins the 2026 World Cup!</span>
+          </div>
+          <div v-if="finalRunnerUp" class="silver-message">
+            <img 
+              v-if="getWinnerCrest(finalRunnerUp)" 
+              :src="getWinnerCrest(finalRunnerUp)" 
+              class="silver-flag"
+              alt=""
+            />
+            <span class="silver-text">{{ finalRunnerUp }} is the runner-up</span>
+          </div>
+          <div v-if="thirdPlaceWinner" class="bronze-message" >
+            <img 
+              v-if="getWinnerCrest(thirdPlaceWinner)" 
+              :src="getWinnerCrest(thirdPlaceWinner)" 
+              class="bronze-flag"
+              alt=""
+            />
+            <span class="bronze-text">{{ thirdPlaceWinner }} finishes 3rd</span>
+          </div>
           <h2 class="final-title">Final</h2>
+          <!-- Winner Message -->
+         
           <KnockoutMatchCard
             v-if="finalMatch"
             :match="finalMatch"
@@ -488,6 +552,8 @@ const selectWinner = (match, team) => {
             class="final-card"
             :ref="el => setCardRef(el, finalMatch.num)"
           />
+          <!-- Silver Message -->
+
         </div>
 
         <!-- Semi Finals -->
@@ -533,6 +599,7 @@ const selectWinner = (match, team) => {
             @select-winner="selectWinner(thirdPlaceMatch, $event)"
             :ref="el => setCardRef(el, thirdPlaceMatch.num)"
           />
+         
         </div>
       </div>
 
@@ -700,8 +767,13 @@ h1 {
   height: 100%;
   pointer-events: none;
   overflow: visible;
-  z-index: 1;
+  z-index: 5;
 }
+/* 
+.center-connector-svg path {
+  stroke: red;
+  stroke-width: 5;
+} */
 
 .diamond-row {
   display: flex;
@@ -748,6 +820,103 @@ h1 {
   background: #fff8e1;
   border-color: #ffc107;
   color: #f57c00;
+}
+
+.winner-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffecb3 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.4);
+  animation: celebrate 0.5s ease-out;
+}
+
+@keyframes celebrate {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.winner-flag {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.winner-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.silver-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(192, 192, 192, 0.4);
+  animation: celebrate 0.5s ease-out;
+  margin-bottom: 20px;
+}
+
+.silver-flag {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.silver-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.bronze-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #cd7f32 0%, #e6a86c 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(205, 127, 50, 0.4);
+  animation: celebrate 0.5s ease-out;
+  margin-bottom: 20px;
+}
+
+.bronze-flag {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.bronze-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .connector-svg {
