@@ -4,39 +4,52 @@ import matchStadiumData from '../data/match-stadium.json'
 import stadiumData from '../data/stadium-data.json'
 import { usePredictionStore } from '../stores/predictionStore'
 import KnockoutMatchCard from '../components/KnockoutMatchCard.vue'
-import { teamCrests } from '../data/constants'
+import { useBracketConnectors } from '../composables/useBracketConnectors'
+import { useKnockoutPredictions } from '../composables/useKnockoutPredictions'
+import { KNOCKOUT_ROUNDS, TOTAL_KNOCKOUT_MATCHES } from '../util/constants'
 
 const predictionStore = usePredictionStore()
 
 // Reactive state
 const knockoutMatches = ref([])
-const stadiums = ref([])
+const stadiumMap = new Map(stadiumData.stadiums.map(s => [s.name, s]))
 const loading = ref(true)
-const cardRefs = ref({})
 const leftBracketEl = ref(null)
-const leftConnectorPaths = ref([])
 const rightBracketEl = ref(null)
-const rightConnectorPaths = ref([])
-const leftSvgViewBox = ref('0 0 0 0')
-const rightSvgViewBox = ref('0 0 0 0')
 const bracketContainerEl = ref(null)
-const centerConnectorPaths = ref([])
-const centerSvgViewBox = ref('0 0 0 0')
 
-// Get third-place seeding lookup
-const thirdPlaceSeeding = computed(() => predictionStore.getThirdPlaceSeeding())
+// Use composables
+const {
+  leftConnectorPaths,
+  rightConnectorPaths,
+  centerConnectorPaths,
+  leftSvgViewBox,
+  rightSvgViewBox,
+  centerSvgViewBox,
+  setCardRef,
+  recalculatePaths
+} = useBracketConnectors(leftBracketEl, rightBracketEl, bracketContainerEl)
+
+const {
+  knockoutPredictions,
+  knockoutLosers,
+  finalWinner,
+  finalRunnerUp,
+  thirdPlaceWinner,
+  getWinnerCrest,
+  getTeamName,
+  selectWinner,
+  finalMatch,
+  thirdPlaceMatch,
+  sf101Match,
+  sf102Match
+} = useKnockoutPredictions(knockoutMatches, predictionStore)
 
 // Load data
 onMounted(async () => {
   knockoutMatches.value = matchStadiumData.matches.filter(match => 
-    match.round === 'Round of 32' || 
-    match.round === 'Round of 16' || 
-    match.round === 'Quarter-final' || 
-    match.round === 'Semi-final' || 
-    match.round === 'Match for third place' || 
-    match.round === 'Final'
+    KNOCKOUT_ROUNDS.has(match.round)
   )
-  stadiums.value = stadiumData.stadiums
   loading.value = false
 
   await nextTick()
@@ -48,10 +61,6 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('resize', recalculatePaths)
 })
-
-const setCardRef = (el, matchNum) => {
-  if (el) cardRefs.value[matchNum] = el.$el  // $el gives the root DOM node
-}
 
 const leftRoundOf32MatchNumbers = [
   74, 77, 73, 75, 83, 84, 81, 82
@@ -79,348 +88,34 @@ const rightRo32Matches = matchesForNumbers(rightRoundOf32MatchNumbers)
 const rightRo16Matches = matchesForNumbers(rightRoundOf16MatchNumbers)
 const rightQFMatches = matchesForNumbers(rightQuarterFinalMatchNumbers)
 
-
-const finalMatch = computed(() => {
-  return knockoutMatches.value.find(match => match.round === 'Final')
-})
-
-const thirdPlaceMatch = computed(() => {
-  return knockoutMatches.value.find(match => match.round === 'Match for third place')
-})
-
-const sf101Match = computed(() => {
-  return knockoutMatches.value.find(match => match.num === 101)
-})
-
-const sf102Match = computed(() => {
-  return knockoutMatches.value.find(match => match.num === 102)
-})
-
-// Get the final winner for the winner message
-const finalWinner = computed(() => {
-  if (finalMatch.value && knockoutPredictions.value[finalMatch.value.num]) {
-    return knockoutPredictions.value[finalMatch.value.num]
-  }
-  return null
-})
-
-// Get the final runner-up for the silver message
-const finalRunnerUp = computed(() => {
-  if (finalMatch.value && knockoutPredictions.value[finalMatch.value.num]) {
-    const team1Name = getTeamName(finalMatch.value.team1, finalMatch.value.num, finalMatch.value.team2)
-    const team2Name = getTeamName(finalMatch.value.team2, finalMatch.value.num, finalMatch.value.team1)
-    const winner = knockoutPredictions.value[finalMatch.value.num]
-    return winner === team1Name ? team2Name : team1Name
-  }
-  return null
-})
-
-// Get the third place winner for the bronze message
-const thirdPlaceWinner = computed(() => {
-  if (thirdPlaceMatch.value && knockoutPredictions.value[thirdPlaceMatch.value.num]) {
-    return knockoutPredictions.value[thirdPlaceMatch.value.num]
-  }
-  return null
-})
-
-// Get the team crest for the winner
-const getWinnerCrest = (teamName) => {
-  return teamCrests[teamName] || null
-}
-
 // Get stadium details by name
-const getStadium = (groundName) => {
-  return stadiums.value.find(stadium => stadium.name === groundName) || null
+const getStadium = (groundName) => stadiumMap.value.get(groundName) ?? null
+
+const allPredictionsMade = computed(() =>
+  Object.keys(knockoutPredictions.value).length === TOTAL_KNOCKOUT_MATCHES
+)
+
+const saveBracket = () => {
+  console.log('Saving bracket...')
 }
 
-// Get team name from code, using predictions if available
-const getTeamName = (teamCode, matchNum, opponentCode) => {
-  if (!teamCode) return 'TBD'
-  
-  // Handle winner references (W74, W77, etc.)
-  if (teamCode.startsWith('W')) {
-    const sourceMatchNum = teamCode.substring(1)
-    // Check if we have a prediction for this match
-    if (knockoutPredictions.value[sourceMatchNum]) {
-      return knockoutPredictions.value[sourceMatchNum]
-    }
-    return `Winner of Match ${sourceMatchNum}`
-  }
-  
-  // Handle loser references (L101, L102, etc.)
-  if (teamCode.startsWith('L')) {
-    const matchNum = teamCode.substring(1)
-    // Check if we have a loser prediction for this match
-    if (knockoutLosers.value[matchNum]) {
-      return knockoutLosers.value[matchNum]
-    }
-    return `Loser of Match ${matchNum}`
-  }
-  
-  // Handle 3rd place team codes with multiple groups (3A/B/C/D/F, etc.)
-  if (teamCode.includes('/')) {
-    // Use seeding lookup to determine which third-place team plays here
-    if (thirdPlaceSeeding.value && opponentCode) {
-      // The opponent code (e.g., "1E") tells us which position this match is for
-      // Look up which third-place team code is assigned to this position
-      const thirdPlaceCode = thirdPlaceSeeding.value[opponentCode]
-      if (thirdPlaceCode) {
-        const teamName = predictionStore.getTeamFromCode(thirdPlaceCode)
-        if (teamName) return teamName
-      }
-    }
-    return 'Best 3rd Place Team'
-  }
-  
-  // Try to get predicted team from store
-  const predictedTeam = predictionStore.getTeamFromCode(teamCode)
-  if (predictedTeam) return predictedTeam
-  
-  // Fallback to formatted placeholder
-  return formatTeamNamePlaceholder(teamCode)
-}
-
-// Format team name placeholder when no prediction available
-const formatTeamNamePlaceholder = (teamCode) => {
-  // Handle group position codes (1A, 2B, 3C, etc.)
-  const groupMatch = teamCode.match(/^(\d)([A-L])$/)
-  if (groupMatch) {
-    const position = groupMatch[1]
-    const group = groupMatch[2]
-    const positionText = position === '1' ? 'Winner' : position === '2' ? 'Runner-up' : '3rd Place'
-    return `${positionText} of Group ${group}`
-  }
-  
-  return teamCode
-}
-
-
-// Store for knockout predictions
-const knockoutPredictions = ref({})
-
-// Store for knockout losers (for third place match)
-const knockoutLosers = ref({})
-
-const getRelativeRect = (el, container) => {
-  const elRect = el.getBoundingClientRect()
-  const containerRect = container.getBoundingClientRect()
-  return {
-    top: elRect.top - containerRect.top,
-    bottom: elRect.bottom - containerRect.top,
-    left: elRect.left - containerRect.left,
-    right: elRect.right - containerRect.left,
-    midY: (elRect.top + elRect.bottom) / 2 - containerRect.top
-  }
-}
-
-
-const leftBracketPairs = [
-  { sources: [74, 77], target: 89 },
-  { sources: [73, 75], target: 90 },
-  { sources: [83, 84], target: 93 },
-  { sources: [81, 82], target: 94 },
-  { sources: [89, 90], target: 97 },
-  { sources: [93, 94], target: 98 },
-]
-
-const rightBracketPairs = [
-  { sources: [76, 78], target: 91 },
-  { sources: [79, 80], target: 92 },
-  { sources: [86, 88], target: 95 },
-  { sources: [85, 87], target: 96 },
-  { sources: [91, 92], target: 99 },
-  { sources: [95, 96], target: 100 },
-]
-
-const centerConnectorPairs = [
-  {
-    type: 'qf-to-sf',
-    sources: [97, 98],
-    target: 101
-  },
-  {
-    type: 'qf-to-sf',
-    sources: [99, 100],
-    target: 102
-  },
-  {
-    type: 'sf-to-final',
-    sources: [101, 102],
-    target: 104
-  },
-  {
-    type: 'sf-to-third',
-    sources: [101, 102],
-    target: 103
-  }
-]
-
-const calculatePaths = (pairs, containerEl, direction = 'left') => {
-  if (!containerEl) return []
-  const paths = []
-
-  for (const pair of pairs) {
-    const el1 = cardRefs.value[pair.sources[0]]
-    const el2 = cardRefs.value[pair.sources[1]]
-    const elTarget = cardRefs.value[pair.target]
-    if (!el1 || !el2 || !elTarget) continue
-
-    const r1 = getRelativeRect(el1, containerEl)
-    const r2 = getRelativeRect(el2, containerEl)
-    const rT = getRelativeRect(elTarget, containerEl)
-
-    // For left bracket: lines exit right edge of source, enter left edge of target
-    // For right bracket: lines exit left edge of source, enter right edge of target
-    const x1 = direction === 'left' ? r1.right : r1.left
-    const x2 = direction === 'left' ? r2.right : r2.left
-    const xT = direction === 'left' ? rT.left : rT.right
-
-    const y1 = r1.midY
-    const y2 = r2.midY
-    const yT = rT.midY
-    const midY = (y1 + y2) / 2
-    const midX = (x1 + xT) / 2
-
-    // From card1: go horizontal to midX, drop to midY
-    // From card2: go horizontal to midX, rise to midY  
-    // Then from midY go horizontal into target card
-    const d = `
-      M ${x1} ${y1} H ${midX} V ${midY}
-      M ${x2} ${y2} H ${midX} V ${midY}
-      M ${midX} ${midY} H ${xT}
-    `.trim()
-
-    paths.push({ id: `${pair.sources[0]}-${pair.sources[1]}`, d })
-  }
-
-  return paths
-}
-
-const calculateCenterPaths = (pairs, containerEl) => {
-  if (!containerEl) return []
-
-  const paths = []
-
-  for (const pair of pairs) {
-    const el1 = cardRefs.value[pair.sources[0]]
-    const el2 = cardRefs.value[pair.sources[1]]
-    const elTarget = cardRefs.value[pair.target]
-
-    if (!el1 || !el2 || !elTarget) continue
-
-    const r1 = getRelativeRect(el1, containerEl)
-    const r2 = getRelativeRect(el2, containerEl)
-    const rT = getRelativeRect(elTarget, containerEl)
-    // console.log(pair)
-    // SF -> Final / Third Place
-    if (pair.type === 'sf-to-final' ) {
-      const joinX = (rT.left + rT.right) / 2
-      const joinY = rT.bottom + 30
-
-      const d = `
-        M ${r1.right} ${r1.midY}
-        H ${joinX}
-        V ${joinY}
-
-        M ${r2.left} ${r2.midY}
-        H ${joinX}
-        V ${joinY}
-
-        M ${joinX} ${joinY}
-        V ${rT.bottom}
-      `.trim()
-
-      paths.push({
-        id: `${pair.sources[0]}-${pair.sources[1]}-${pair.target}`,
-        d
-      })
-
-      continue
-    }
-
-    // QF -> SF
-    const x1 = r1.right
-    const x2 = r2.left
-    const xT = rT.left
-
-    const y1 = r1.midY
-    const y2 = r2.midY
-    const yT = rT.midY
-
-    const midY = (y1 + y2) / 2
-    const midX = (x1 + xT) / 2
-
-    const d = `
-      M ${x1} ${y1} H ${midX} V ${midY}
-      M ${x2} ${y2} H ${midX} V ${midY}
-      M ${midX} ${midY} H ${xT}
-    `.trim()
-
-    paths.push({
-      id: `${pair.sources[0]}-${pair.sources[1]}-${pair.target}`,
-      d
-    })
-  }
-
-  return paths
-}
-
-const recalculatePaths = () => {
-  if (leftBracketEl.value) {
-    const r = leftBracketEl.value.getBoundingClientRect()
-    leftSvgViewBox.value = `0 0 ${r.width} ${r.height}`
-  }
-  if (rightBracketEl.value) {
-    const r = rightBracketEl.value.getBoundingClientRect()
-    rightSvgViewBox.value = `0 0 ${r.width} ${r.height}`
-  }
-  if (bracketContainerEl.value) {
-    const r = bracketContainerEl.value.getBoundingClientRect()
-    centerSvgViewBox.value = `0 0 ${r.width} ${r.height}`
-  }
-  leftConnectorPaths.value = calculatePaths(leftBracketPairs, leftBracketEl.value, 'left')
-  rightConnectorPaths.value = calculatePaths(rightBracketPairs, rightBracketEl.value, 'right')
-  centerConnectorPaths.value = calculateCenterPaths(centerConnectorPairs, bracketContainerEl.value)
-}
-
-// Handle team selection with auto-advance
-const selectWinner = (match, team) => {
-  // Store the winner for this match
-  knockoutPredictions.value[match.num] = team
-  
-  // For semi-final matches (101, 102), track the loser for third place match
-  if (match.num === 101 || match.num === 102) {
-    const team1Name = getTeamName(match.team1, match.num, match.team2)
-    const team2Name = getTeamName(match.team2, match.num, match.team1)
-    // The loser is the team that wasn't selected as winner
-    const loser = team === team1Name ? team2Name : team1Name
-    knockoutLosers.value[match.num] = loser
-  }
-  
-  // Load bracket advancement data
-  import('../data/bracket-advancement.json').then(data => {
-    const advancement = data.default || data
-    
-    // Find which matches this winner advances to
-    const advancesTo = advancement.forward[match.num]
-    if (advancesTo) {
-      // Update the team in the advancing match
-      const advancingMatch = knockoutMatches.value.find(m => m.num === advancesTo.matchNum)
-      if (advancingMatch) {
-        if (advancesTo.position === 'team1') {
-          advancingMatch.team1 = `W${match.num}`
-        } else if (advancesTo.position === 'team2') {
-          advancingMatch.team2 = `W${match.num}`
-        }
-      }
-    }
-  })
-}
 </script>
 
 <template>
   <div class="knockouts-page">
-    <h1>World Cup 2026 - Knockout Stage</h1>
+    <v-row>
+      <v-col cols="10">
+        <h1>World Cup 2026 - Knockout Stage</h1>
+      </v-col>
+      <v-col cols="2">
+        <v-btn
+          :disabled="!allPredictionsMade"
+          @click="saveBracket"
+        >
+          Save My Bracket
+        </v-btn>
+      </v-col>
+    </v-row>
     
     <div v-if="loading" class="loading">
       Loading bracket...
@@ -552,8 +247,6 @@ const selectWinner = (match, team) => {
             class="final-card"
             :ref="el => setCardRef(el, finalMatch.num)"
           />
-          <!-- Silver Message -->
-
         </div>
 
         <!-- Semi Finals -->
@@ -769,11 +462,6 @@ h1 {
   overflow: visible;
   z-index: 5;
 }
-/* 
-.center-connector-svg path {
-  stroke: red;
-  stroke-width: 5;
-} */
 
 .diamond-row {
   display: flex;
