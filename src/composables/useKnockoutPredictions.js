@@ -116,12 +116,12 @@ export const useKnockoutPredictions = (knockoutMatches, predictionStore) => {
 
   const buildPayload = () => ({
     predictions: { ...knockoutPredictions.value },
-    losers: { ...knockoutLosers.value }
+    groupStage: predictionStore.getGroupStagePredictions()
   })
 
   const loadPredictions = (data) => {
     if (data.predictions) knockoutPredictions.value = data.predictions
-    if (data.losers) knockoutLosers.value = data.losers
+    if (data.groupStage) predictionStore.loadGroupStagePredictions(data.groupStage)
   }
 
   return {
