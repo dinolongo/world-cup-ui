@@ -1,5 +1,4 @@
 <script setup>
-import { computed } from 'vue'
 import { teamCrests } from '../util/constants'
 
 const props = defineProps({
@@ -13,6 +12,14 @@ const props = defineProps({
   },
   team2Name: {
     type: String,
+    required: true
+  },
+  team1Id: {
+    type: [String, null],
+    required: true
+  },
+  team2Id: {
+    type: [String, null],
     required: true
   },
   stadium: {
@@ -36,12 +43,14 @@ const formatTime = (timeStr) => {
   return timeStr
 }
 
-const getTeamCrest = (teamName) => {
-  return teamCrests[teamName] || null
-}
+const getTeamCrest = (teamName) => teamCrests[teamName] ?? null
 
-const handleTeamClick = (team) => {
-  emit('select-winner', team)
+
+const handleTeamClick = (teamId) => {
+  if (!teamId) {
+    return
+  }
+  emit('select-winner', teamId)
 }
 </script>
 
@@ -56,7 +65,7 @@ const handleTeamClick = (team) => {
     <div class="teams">
       <button 
         class="team-button"
-        @click="handleTeamClick(team1Name)"
+        @click="handleTeamClick(team1Id)"
       >
         <img 
           v-if="getTeamCrest(team1Name)" 
@@ -68,7 +77,7 @@ const handleTeamClick = (team) => {
       </button>
       <button 
         class="team-button"
-        @click="handleTeamClick(team2Name)"
+        @click="handleTeamClick(team2Id)"
       >
         <img 
           v-if="getTeamCrest(team2Name)" 
@@ -84,12 +93,12 @@ const handleTeamClick = (team) => {
 
 <style scoped>
 .knockout-match-card {
-  background: white;
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
   border-radius: 8px;
   padding: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-width: 130px;   /* was 108px */
-  max-width: 144px;   /* was 120px */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  min-width: 130px;
+  max-width: 144px;
 }
 
 .match-info {
@@ -98,27 +107,27 @@ const handleTeamClick = (team) => {
   gap: 2px;
   margin-bottom: 6px;
   font-size: 10px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .match-number {
   font-weight: 700;
-  color: #667eea;
+  color: #ffd700;
   font-size: 11px;
 }
 
 .date-time {
   font-weight: 600;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .stadium {
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   font-weight: 500;
 }
 
 .city {
-  color: #999;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 11px;
 }
 
@@ -129,13 +138,13 @@ const handleTeamClick = (team) => {
 }
 
 .team-button {
-  background: #f5f5f5;
-  border: 2px solid #e0e0e0;
+  background: #3d3d3d;
+  border: 2px solid #4d4d4d;
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 11px;
   font-weight: 500;
-  color: #333;
+  color: #e0e0e0;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
@@ -146,9 +155,9 @@ const handleTeamClick = (team) => {
 }
 
 .team-button:hover {
-  background: #e8f4e8;
-  border-color: #4caf50;
-  color: #2e7d32;
+  background: #4d4d4d;
+  border-color: #5d5d5d;
+  color: white;
 }
 
 .team-button:active {

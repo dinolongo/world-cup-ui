@@ -46,3 +46,33 @@ export async function getGroups() {
 export async function getGroupByName(groupName) {
   return fetchAPI(`/groups/${groupName}`);
 }
+
+export async function checkDisplayName(displayName) {
+  return fetchAPI('/predictions/check-name', {
+    method: 'POST',
+    body: JSON.stringify({ displayName }),
+  });
+}
+
+export async function savePrediction(displayName, groupStagePredictions, knockoutPredictions) {
+  return fetchAPI('/predictions/save', {
+    method: 'POST',
+    body: JSON.stringify({
+      displayName,
+      groupStagePredictions,
+      knockoutPredictions,
+    }),
+  });
+}
+
+export async function getPrediction(bracketId) {
+  return fetchAPI(`/predictions/${bracketId}`);
+}
+
+export async function getAllPredictions() {
+  return fetchAPI('/predictions');
+}
+
+export async function getLeaderboard() {
+  return fetchAPI('/leaderboard');
+}
