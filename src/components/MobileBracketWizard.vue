@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useDisplay } from 'vuetify'
 import KnockoutMatchCard from './KnockoutMatchCard.vue'
 import { useKnockoutPredictions } from '../composables/useKnockoutPredictions'
 import { BRACKET_LAYOUT, TOTAL_KNOCKOUT_MATCHES, teamCrests } from '../util/constants'
@@ -26,8 +25,6 @@ const {
   allPredictionsMade,
   buildPayload
 } = useKnockoutPredictions(props.knockoutMatches, predictionStore)
-
-const { smAndDown } = useDisplay()
 
 const currentMatchIndex = ref(0)
 const showCompletionScreen = ref(false)
