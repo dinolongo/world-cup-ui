@@ -179,11 +179,10 @@ onUnmounted(() => {
 <template>
   <div class="schedule-page">
     <div class="page-header">
-      <h1>World Cup 2026 - Match Day {{ selectedMatchday }} Schedule</h1>
+      <h1>World Cup 2026 Schedule</h1>
       <v-btn color="primary" @click="refreshMatchesData">Refresh</v-btn>
     </div>
     
-    <!-- Countdown Timer -->
     <div class="countdown-container" v-if="nextMatch">
       <h2 class="countdown-title">Next Match: {{ nextMatch.homeTeam.name }} vs {{ nextMatch.awayTeam.name }}</h2>
       <div class="countdown-timer">
