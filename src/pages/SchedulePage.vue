@@ -180,8 +180,22 @@ onUnmounted(() => {
   <div class="schedule-page">
     <div class="page-header">
       <h1>World Cup 2026 Schedule</h1>
-      <v-btn color="primary" @click="refreshMatchesData">Refresh</v-btn>
+      <!-- <button @click="refreshMatchesData" class="refresh-icon" title="Refresh">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 16h5v5"/>
+        </svg>
+      </button> -->
+      <v-btn icon @click="refreshMatchesData" class="refresh-icon">
+        <v-icon>mdi-refresh</v-icon>
+    </v-btn>
     </div>
+    
+    <v-overlay v-model="loading" class="loading-overlay">
+      <v-progress-circular indeterminate size="64" color="white"></v-progress-circular>
+    </v-overlay>
     
     <div class="countdown-container" v-if="nextMatch">
       <h2 class="countdown-title">Next Match: {{ nextMatch.homeTeam.name }} vs {{ nextMatch.awayTeam.name }}</h2>
@@ -244,6 +258,31 @@ onUnmounted(() => {
   width: 100%;
   max-width: 1400px;
   gap: 20px;
+}
+
+.refresh-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  color: white;
+}
+
+.refresh-icon:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.refresh-icon svg {
+  color: white;
+}
+
+.loading-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 h1 {
