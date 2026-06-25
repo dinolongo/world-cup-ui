@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import draggable from 'vuedraggable'
 import { usePredictionStore } from '../stores/predictionStore'
 import { teamCrests } from '../util/constants'
+import { getGroups } from '../services/api'
 
 const router = useRouter()
 const predictionStore = usePredictionStore()
@@ -13,8 +14,7 @@ const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const response = await fetch('https://world-cup-yzg0.onrender.com/api/groups')
-    const data = await response.json()
+    const data = await getGroups()
     const groupedData = {}
     data.forEach(team => {
       if (!groupedData[team.groupName]) groupedData[team.groupName] = []

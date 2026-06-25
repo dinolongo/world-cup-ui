@@ -5,6 +5,7 @@ import PredictionPage from '../pages/PredictionPage.vue'
 import KnockoutsPage from '../pages/KnockoutsPage.vue'
 import AboutPage from '../pages/AboutPage.vue'
 import LeaderboardPage from '../pages/LeaderboardPage.vue'
+import BracketViewPage from '../pages/BracketViewPage.vue'
 
 const routes = [
   {
@@ -31,6 +32,11 @@ const routes = [
     path: '/leaderboard',
     name: 'Leaderboard',
     component: LeaderboardPage
+  },
+  {
+    path: '/bracket/:bracketId',
+    name: 'BracketView',
+    component: BracketViewPage
   },
   {
     path: '/about',

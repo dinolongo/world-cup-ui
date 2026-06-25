@@ -159,6 +159,22 @@ export const useKnockoutPredictions = (knockoutMatches, predictionStore) => {
     knockoutLosers.value = {}
   }
 
+  const rebuildLosersFromPredictions = () => {
+    knockoutLosers.value = {}
+
+    for (const [matchNum, entry] of Object.entries(advancementMap)) {
+      if (!entry.loserTo) continue
+
+      const match = knockoutMatches.value.find(m => String(m.num) === String(matchNum))
+      const winnerId = knockoutPredictions.value[matchNum]
+      if (!match || !winnerId) continue
+
+      const team1Id = getTeamId(match.team1, match.num, match.team2)
+      const team2Id = getTeamId(match.team2, match.num, match.team1)
+      knockoutLosers.value[matchNum] = String(winnerId) === String(team1Id) ? team2Id : team1Id
+    }
+  }
+
   // ── Save / load ───────────────────────────────────────────────────────────
 
   const allPredictionsMade = computed(() => {
@@ -175,6 +191,7 @@ export const useKnockoutPredictions = (knockoutMatches, predictionStore) => {
   const loadPredictions = (data) => {
     if (data.knockoutPredictions) knockoutPredictions.value = data.knockoutPredictions
     if (data.groupStagePredictions) predictionStore.loadGroupStagePredictions(data.groupStagePredictions)
+    rebuildLosersFromPredictions()
   }
 
   return {

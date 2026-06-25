@@ -29,6 +29,14 @@ const props = defineProps({
   matchNum: {
     type: Number,
     default: null
+  },
+  winnerId: {
+    type: [String, Number],
+    default: null
+  },
+  readonly: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -47,10 +55,14 @@ const getTeamCrest = (teamName) => teamCrests[teamName] ?? null
 
 
 const handleTeamClick = (teamId) => {
-  if (!teamId) {
+  if (props.readonly || !teamId) {
     return
   }
   emit('select-winner', teamId)
+}
+
+const isWinner = (teamId) => {
+  return props.winnerId != null && teamId != null && String(props.winnerId) === String(teamId)
 }
 </script>
 
@@ -64,7 +76,8 @@ const handleTeamClick = (teamId) => {
     </div>
     <div class="teams">
       <button 
-        class="team-button"
+        :class="['team-button', { winner: isWinner(team1Id), readonly }]"
+        :disabled="readonly"
         @click="handleTeamClick(team1Id)"
       >
         <img 
@@ -76,7 +89,8 @@ const handleTeamClick = (teamId) => {
         {{ team1Name }}
       </button>
       <button 
-        class="team-button"
+        :class="['team-button', { winner: isWinner(team2Id), readonly }]"
+        :disabled="readonly"
         @click="handleTeamClick(team2Id)"
       >
         <img 
@@ -166,6 +180,30 @@ const handleTeamClick = (teamId) => {
   background: #4d4d4d;
   border-color: #5d5d5d;
   color: white;
+}
+
+.team-button.readonly {
+  cursor: default;
+}
+
+.team-button.readonly:hover {
+  background: #3d3d3d;
+  border-color: #4d4d4d;
+  color: #e0e0e0;
+}
+
+.team-button.winner {
+  background: #fff8e1;
+  border-color: #ffd700;
+  color: #1a1a1a;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.35);
+}
+
+.team-button.winner:hover {
+  background: #fff8e1;
+  border-color: #ffd700;
+  color: #1a1a1a;
 }
 
 .team-button:active {
